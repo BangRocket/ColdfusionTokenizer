@@ -1,12 +1,12 @@
 from typing import List
-from token import Token
+from cftoken import CFToken
 
 class Tokenizer:
     def __init__(self, code: str):
         self.code = code
         self.tokens = []
 
-    def get_tokens(self) -> List[Token]:
+    def get_tokens(self) -> List[CFToken]:
         line = 1
         column = 1
 
@@ -31,7 +31,7 @@ class Tokenizer:
                     i += 1
                 value = self.code[start:i]
                 token_type = 'identifier' if value.isidentifier() else 'keyword'
-                self.tokens.append(Token(token_type, value, line, column))
+                self.tokens.append(CFToken(token_type, value, line, column))
                 column += i - start
                 continue
 
@@ -45,7 +45,7 @@ class Tokenizer:
                     while i < len(self.code) and self.code[i].isdigit():
                         i += 1
                 value = self.code[start:i]
-                self.tokens.append(Token('number', value, line, column))
+                self.tokens.append(CFToken('number', value, line, column))
                 column += i - start
                 continue
 
@@ -58,7 +58,7 @@ class Tokenizer:
                 if i < len(self.code) and self.code[i] == char:
                     i += 1
                 value = self.code[start:i]
-                self.tokens.append(Token('string', value, line, column))
+                self.tokens.append(CFToken('string', value, line, column))
                 column += i - start
                 continue
 
@@ -69,12 +69,12 @@ class Tokenizer:
                 while i < len(self.code) and self.code[i] in '+-*/%=&|<>!':
                     i += 1
                 value = self.code[start:i]
-                self.tokens.append(Token('operator', value, line, column))
+                self.tokens.append(CFToken('operator', value, line, column))
                 column += i - start
                 continue
 
             # Other characters
-            self.tokens.append(Token('other', char, line, column))
+            self.tokens.append(CFToken('other', char, line, column))
             column += 1
             i += 1
 

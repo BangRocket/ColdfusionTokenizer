@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 @dataclass
-class Token:
+class CFToken:
     type: str
     value: str
     line: int
