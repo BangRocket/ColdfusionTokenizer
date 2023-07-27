@@ -1,30 +1,60 @@
-## Tokenizer for ColdFusion Language Code
+Here is the README in Markdown syntax:
 
-### Introduction
-In this task, we need to write a tokenizer for the ColdFusion language code using Python. The tokenizer will take a ColdFusion code as input and tokenize it into a sequence of tokens.
+# cftokenizer.py
 
-### Tokenizer Architecture
-The tokenizer will consist of the following main classes and functions:
+## Overview
 
-1. `Token` class: This class represents a token in the ColdFusion code. It will have the following attributes:
-   - `type`: The type of the token (e.g., identifier, string, number, operator, etc.).
-   - `value`: The value of the token.
-   - `line`: The line number where the token appears in the code.
-   - `column`: The column number where the token appears in the code.
+cftokenizer.py is a Python module for tokenizing ColdFusion code. It can break up ColdFusion tags, strings, and other elements into tokens that can be used for parsing, analyzing, or processing ColdFusion code.
 
-2. `Tokenizer` class: This class is responsible for tokenizing the ColdFusion code. It will have the following methods:
-   - `__init__(self, code: str)`: Initializes the tokenizer with the ColdFusion code.
-   - `get_tokens(self) -> List[Token]`: Tokenizes the code and returns a list of tokens.
+The module provides the following classes:
 
-3. `is_identifier_char(char: str) -> bool`: A helper function that checks whether a character is a valid identifier character.
+- **CFToken** - Base token class  
+- **CFTagToken** - Tokens for ColdFusion tags
+- **CFStringToken** - Tokens for ColdFusion strings
+- **CFTokenizer** - Tokenizer class
 
-4. `is_number_char(char: str) -> bool`: A helper function that checks whether a character is a valid number character.
+## Usage
 
-5. `is_string_char(char: str) -> bool`: A helper function that checks whether a character is a valid string character.
+To use the tokenizer:
 
-6. `is_operator_char(char: str) -> bool`: A helper function that checks whether a character is a valid operator character.
+```python
+from cftokenizer import CFTokenizer
 
-### Tokenizer Implementation
-Let's start by implementing the `Token` class:
+code = "<cfset x = 1>"
 
-[token.py]
+tokenizer = CFTokenizer(code)
+tokens = tokenizer.tokenize_code()
+
+for token in tokens:
+  print(token)
+```
+
+This will break the code into `CFTagToken` and `CFStringToken` instances. 
+
+The tokens contain the value, line number, and column number where they occurred in the code.
+
+## CFTokenizer
+
+The `CFTokenizer` class handles tokenizing the ColdFusion code.
+
+It takes the source code as a constructor parameter.
+
+The `tokenize_code()` method breaks the code into lines, then calls `tokenize_line()` to generate tokens for each line.
+
+`tokenize_line()` handles finding tags using a regex, and strings using a separate regex. It uses the match positions to determine the line and column numbers.
+
+## CFToken
+
+The `CFToken` base class holds the token value, line number, and column number.
+
+## CFTagToken
+
+The `CFTagToken` subclass holds ColdFusion tag tokens. It parses the tag name from the value.
+
+## CFStringToken  
+
+The `CFStringToken` subclass holds ColdFusion string tokens. It classifies strings as literals or single-quoted.
+
+## Resources
+
+See the [ColdFusion documentation](http://cfdocs.org) for more details on ColdFusion syntax.

@@ -1,71 +1,55 @@
 import unittest
-from tokenizer import tokenize
+from cftokenizer import CFTokenizer, CFTagToken
 
-class TokenizerTestCase(unittest.TestCase):
-    def test_tokenize_empty_string(self):
-        code = ""
-        expected_tokens = []
-        tokens = tokenize(code)
-        self.assertEqual(tokens, expected_tokens)
+class TestCFTokenizer(unittest.TestCase):
 
-    def test_tokenize_single_line_comment(self):
-        code = "// This is a single line comment"
-        expected_tokens = [
-            {"type": "comment", "value": "// This is a single line comment"}
-        ]
-        tokens = tokenize(code)
-        self.assertEqual(tokens, expected_tokens)
+  def test_tokenize_with_html(self):
+    code = """
+<html>
+<body>
 
-    def test_tokenize_multi_line_comment(self):
-        code = "/* This is a\nmulti-line\ncomment */"
-        expected_tokens = [
-            {"type": "comment", "value": "/* This is a\nmulti-line\ncomment */"}
-        ]
-        tokens = tokenize(code)
-        self.assertEqual(tokens, expected_tokens)
+<cfset x = 1>
 
-    def test_tokenize_string_literal(self):
-        code = '"This is a string literal"'
-        expected_tokens = [
-            {"type": "string", "value": '"This is a string literal"'}
-        ]
-        tokens = tokenize(code)
-        self.assertEqual(tokens, expected_tokens)
+<p>Hello World</p>
 
-    def test_tokenize_number_literal(self):
-        code = "123.45"
-        expected_tokens = [
-            {"type": "number", "value": "123.45"}
-        ]
-        tokens = tokenize(code)
-        self.assertEqual(tokens, expected_tokens)
+<cfif x GT 10>
+  <cfloop index="i" from="1" to="10">
+    <cfoutput>#i#</cfoutput>
+  </cfloop> 
+</cfif>
 
-    def test_tokenize_variable_declaration(self):
-        code = "var x = 10;"
-        expected_tokens = [
-            {"type": "keyword", "value": "var"},
-            {"type": "identifier", "value": "x"},
-            {"type": "operator", "value": "="},
-            {"type": "number", "value": "10"},
-            {"type": "delimiter", "value": ";"}
-        ]
-        tokens = tokenize(code)
-        self.assertEqual(tokens, expected_tokens)
+<cffunction name="test">
+  <cfargument name="x" type="numeric">
+  <cfreturn x * 2>  
+</cffunction>
 
-    def test_tokenize_function_call(self):
-        code = "foo(1, 2, 3)"
-        expected_tokens = [
-            {"type": "identifier", "value": "foo"},
-            {"type": "delimiter", "value": "("},
-            {"type": "number", "value": "1"},
-            {"type": "delimiter", "value": ","},
-            {"type": "number", "value": "2"},
-            {"type": "delimiter", "value": ","},
-            {"type": "number", "value": "3"},
-            {"type": "delimiter", "value": ")"}
-        ]
-        tokens = tokenize(code)
-        self.assertEqual(tokens, expected_tokens)
+<script>
+  console.log("JS code");
+</script>
 
-if __name__ == "__main__":
+"String" 'String'
+
+</body>
+</html>
+"""
+
+    tokenizer = CFTokenizer(code)
+    tokens = tokenizer.tokenize_code()
+
+    self.assertGreater(len(tokens), 20)
+    
+    self.assertIsInstance(tokens[0], CFTagToken) 
+    self.assertEqual(tokens[0].name, "html")
+
+    self.assertEqual(tokens[3].value, "<p>Hello World</p>")
+
+    self.assertIsInstance(tokens[7], CFTagToken)
+    self.assertEqual(tokens[7].name, "cfif")
+
+    self.assertIsInstance(tokens[-4], CFTagToken)
+    self.assertEqual(tokens[-4].name, "script")
+
+    self.assertEqual(tokens[-2].value, '"String"')
+
+if __name__ == '__main__':
     unittest.main()
