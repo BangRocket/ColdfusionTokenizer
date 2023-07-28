@@ -1,7 +1,20 @@
+"""
+CFMLTokenizer - Tokenizer for ColdFusion Markup Language code 
+
+Tokens CFML code by extracting tags, strings, keywords, 
+functions, script blocks etc into a token object model.
+
+Provides nested tag support by tracking open tags during
+tokenization.
+
+"""
+
 import re
+from collections import deque
 
 
 class CFToken:
+    """Base token class with value, line and column"""
 
     def __init__(self, value, line, col):
         self.value = value
@@ -13,14 +26,18 @@ class CFToken:
 
 
 class CFTagToken(CFToken):
+    """Represents start, end tags"""
+
+    TAG_REGEX = re.compile(r'<(/?\w+)(.*?)>')
 
     def __init__(self, value, line, col):
         super().__init__(value, line, col)
-        self.name = value[1:-1]
+        self.name = value[1:-1]  # Extract tag name
 
 
 class CFStringToken(CFToken):
 
+    STRING_REGEX = re.compile(r'(".*?")|(\'.*?\')')
     LITERAL = 'literal'
     SINGLE_QUOTE = 'single quote'
 
@@ -179,36 +196,107 @@ class CFScriptToken(CFToken):
 
 class CFMLTokenizer:
 
-    TAG_REGEX = re.compile(r'<\/?\w.*?>')
-    STRING_REGEX = re.compile(r'(".*?")|(\'.*?\')')
+    HTML_TAG_REGEX = re.compile(r'<(\w+)(.*?)/?>')
+    CF_TAG_REGEX = re.compile(r'<cf(\w+)(.*?)/?>')
 
     def __init__(self, code):
         self.code = code
         self.tokens = []
+        self.open_tags = deque()  # Track open tags
 
     def tokenize(self):
+        """Tokenize entire code by line"""
         lines = self.code.split('\n')
 
         for line_num, line in enumerate(lines, start=1):
             self.tokenize_line(line, line_num)
 
+        # Validate all tags closed
+        if self.open_tags:
+            self.handle_unclosed_tags(line_num)
+
         return self.tokens
 
     def tokenize_line(self, text, line_num):
+        """Tokenize a single line of code"""
+
+        # Tokenize parts of CFML syntax
         self.tokenize_tags(text, line_num)
         self.tokenize_strings(text, line_num)
         self.tokenize_keywords(text, line_num)
-        self.tokenize_operators(text, line_num)
         self.tokenize_functions(text, line_num)
         self.tokenize_script(text, line_num)
 
-    def tokenize_tags(self, text, line):
-        for match in self.TAG_REGEX.finditer(text):
-            token = CFTagToken(match.group(), line, match.start()+1)
-            self.tokens.append(token)
+    def tokenize_tags(self, text, line_num):
+        """Extract tags into tokens"""
+
+        pos = 0
+        while pos < len(text):
+            
+            # Check for HTML tag
+            html_match = self.HTML_TAG_REGEX.match(text, pos)
+            if html_match:
+                # Handle HTML tag
+                self.handle_html_tag(html_match, line_num)
+                pos = html_match.end()
+                continue
+            
+            # Check for CF tag 
+            cf_match = self.CF_TAG_REGEX.match(text, pos)
+            if cf_match:
+                # Handle CF tag
+                self.handle_cf_tag(cf_match, line_num)
+                pos = cf_match.end()
+                continue
+                
+            # No more tags
+            break
+
+        # Validate all CF tags closed  
+        if self.open_cf_tags:
+            self.handle_unclosed_cf_tags(line_num)
+
+    # Tag handling methods
+    def handle_cf_tag(self, match, line_num):
+        
+        tag_name = match.group(1)
+        is_self_closing = match.group(2).endswith('/')
+        
+        if is_self_closing:
+            # Handle self closing CF tag
+            self.handle_self_closing_tag()
+        else:
+            # Handle open and close CF tags
+            if tag_name.startswith('/'):
+                # Closing tag
+                self.handle_opening_tag()
+            else:
+                # Opening tag
+                self.handle_closing_tag()
+                
+    def handle_closing_tag(self, tag, line_num):
+        """Handle closing tag"""
+
+        opening_tag = self.open_tags.pop()
+        if opening_tag != tag[1:]:
+            print(f"Error: {tag} does not match {opening_tag} at {line_num}")
+
+        closing_tag_token = CFTagToken(tag, line_num, 0)
+        self.tokens.append(closing_tag_token)
+
+    def handle_opening_tag(self, tag, attrs, line_num):
+        """Handle opening tag"""
+
+        opening_tag_token = CFTagToken(f"<{tag}{attrs}>", line_num, 0)
+        self.tokens.append(opening_tag_token)
+        self.open_tags.append(tag)
+
+    def handle_unclosed_tags(self, line_num):
+        """Handle tags not closed at end"""
+        print(f"Error: Unclosed tags at end: {self.open_tags}")
 
     def tokenize_strings(self, text, line):
-        for match in self.STRING_REGEX.finditer(text):
+        for match in CFStringToken.STRING_REGEX.finditer(text):
             token = CFStringToken(match.group(), line, match.start()+1)
             self.tokens.append(token)
 
@@ -223,7 +311,7 @@ class CFMLTokenizer:
             if func in text:
                 token = CFFunctionToken(func, line, text.find(func))
                 self.tokens.append(token)
-            
+
     def tokenize_script(self, text, line):
         idx = text.find('<cfscript>')
         if idx != -1:
